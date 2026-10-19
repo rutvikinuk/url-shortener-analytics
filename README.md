@@ -41,8 +41,12 @@ cp .env.example .env
 php artisan key:generate
 touch database/database.sqlite
 php artisan migrate
-php artisan serve
+php artisan serve        # http://localhost:8000
+php artisan test         # run the backend tests
 ```
+
+Requires PHP 8.3 with the `sqlite3`, `pdo_sqlite`, `mbstring`, `dom` and `xml`
+extensions, and Composer.
 
 Make sure `.env` has:
 
@@ -55,8 +59,23 @@ DB_CONNECTION=sqlite
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev      # http://localhost:5173, proxies /api to Laravel on :8000
+npm run build    # production build
+npm run lint
 ```
+
+### Quick smoke test
+
+With the backend running:
+
+```bash
+curl -X POST localhost:8000/api/links -H 'Accept: application/json' \
+  -H 'Content-Type: application/json' \
+  -d '{"destination_url":"https://example.com","slug":"demo"}'
+curl -i localhost:8000/api/links/demo     # 302 to the destination, click logged
+```
+
+Always send `Accept: application/json` so validation errors come back as JSON.
 
 ## API
 
@@ -69,3 +88,15 @@ npm run dev
 ## Roadmap
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the sprint-by-sprint build plan.
+
+## Known issues (Day 1 audit, 19 Oct 2026)
+
+Verified by running the app locally: link creation, custom slugs, duplicate
+slug rejection (422), non-http URL rejection, 404 for unknown slugs, 302
+redirect with click logging, and the frontend build/lint all work. Still open:
+
+- Reserved slugs (e.g. `api`, `up`) are accepted. Planned for the slug-validation day.
+- No rate limiting on `POST /api/links`.
+- The redirect lives at `/api/links/{slug}`, not a short `/{slug}` URL.
+- The frontend is still the Vite starter page and does not call the API yet.
+- Only the two default example tests exist; real tests come later in the plan.
