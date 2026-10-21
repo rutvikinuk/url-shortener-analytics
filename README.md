@@ -72,7 +72,8 @@ With the backend running:
 curl -X POST localhost:8000/api/links -H 'Accept: application/json' \
   -H 'Content-Type: application/json' \
   -d '{"destination_url":"https://example.com","slug":"demo"}'
-curl -i localhost:8000/api/links/demo     # 302 to the destination, click logged
+curl -i localhost:8000/demo               # 302 to the destination, click logged
+curl localhost:8000/api/links/demo/analytics?days=7
 ```
 
 Always send `Accept: application/json` so validation errors come back as JSON.
@@ -84,19 +85,26 @@ Always send `Accept: application/json` so validation errors come back as JSON.
 | GET    | `/api/links`         | List all links                                |
 | POST   | `/api/links`         | Create a new short link                       |
 | GET    | `/api/links/{slug}`  | Redirect to the destination and log the click |
+| GET    | `/{slug}`            | Short URL: 302 to the destination, click logged |
+| GET    | `/api/links/{slug}/analytics` | Per-link totals, time series, top referrers |
+| GET    | `/api/analytics`     | Same for all links, plus `top_links`          |
+
+Slugs: 3-32 characters of letters, numbers, `-` and `_`; stored lowercase;
+reserved words (`api`, `up`, `admin`, ...) are rejected.
+
+Analytics query params: `days` (1-365, default 30) and `interval` (`day` or
+`week`). The series is zero-filled so charts have no gaps.
 
 ## Roadmap
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the sprint-by-sprint build plan.
 
-## Known issues (Day 1 audit, 19 Oct 2026)
+## Known issues (Day 1 audit, 19 Oct 2026; updated Day 3)
 
 Verified by running the app locally: link creation, custom slugs, duplicate
 slug rejection (422), non-http URL rejection, 404 for unknown slugs, 302
 redirect with click logging, and the frontend build/lint all work. Still open:
 
-- Reserved slugs (e.g. `api`, `up`) are accepted. Planned for the slug-validation day.
 - No rate limiting on `POST /api/links`.
-- The redirect lives at `/api/links/{slug}`, not a short `/{slug}` URL.
 - The frontend is still the Vite starter page and does not call the API yet.
-- Only the two default example tests exist; real tests come later in the plan.
+- Test coverage so far: slug validation, redirect and click logging, analytics queries (`php artisan test`).

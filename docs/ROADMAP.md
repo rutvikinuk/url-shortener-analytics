@@ -13,9 +13,9 @@ Goal: a working, tested API that can create short links and log clicks.
 - [x] `LinkClick` model + migration (link_id, ip, user_agent, referrer)
 - [x] `LinkController` REST endpoints (`index`, `store`, `show`)
 - [x] Redirect endpoint logs a click on every visit
-- [ ] Slug validation (uniqueness, reserved words, allowed characters)
+- [x] Slug validation (uniqueness, reserved words, allowed characters)
 - [ ] Rate limiting on link creation
-- [ ] Basic feature tests for the API endpoints
+- [~] Basic feature tests for the API endpoints (links + analytics done; more on test day)
 - [ ] Deploy backend to a staging environment
 
 ## Sprint 2 — Frontend & QR Codes (Sep 22 – Oct 5)
@@ -33,10 +33,10 @@ Goal: a usable UI for creating and managing links.
 
 Goal: a working analytics dashboard and a deployed, demo-ready app.
 
-- [ ] Aggregate click data by day/week for time-series charts
+- [x] Aggregate click data by day/week for time-series charts
 - [ ] Geography breakdown (IP-based lookup)
 - [ ] Device/browser breakdown (user-agent parsing)
-- [ ] Referrer breakdown
+- [x] Referrer breakdown
 - [ ] Dashboard charts (time-series, pie/bar breakdowns)
 - [ ] Per-link analytics detail view
 - [ ] Final polish pass (empty states, loading states, error handling)

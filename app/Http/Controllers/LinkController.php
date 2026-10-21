@@ -3,9 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Link;
+use App\Rules\ValidSlug;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rule;
 
 class LinkController extends Controller
 {
@@ -22,46 +22,33 @@ class LinkController extends Controller
      */
     public function store(Request $request)
     {
+        // Slugs are case-insensitive: normalise before validating uniqueness.
+        if (is_string($request->input('slug'))) {
+            $request->merge(['slug' => Str::lower($request->input('slug'))]);
+        }
+
         $validated = $request->validate([
-            'destination_url' => ['required', 'url', 'max:2048'],
-            'slug' => ['nullable', 'alpha_dash', 'max:32', Rule::unique('links', 'slug')],
+            'destination_url' => ['required', 'url:http,https', 'max:2048'],
+            'slug' => ['nullable', new ValidSlug, 'unique:links,slug'],
         ]);
 
         $link = Link::create([
             'destination_url' => $validated['destination_url'],
-            'slug' => $validated['slug'] ?? $this->generateUniqueSlug(),
+            'slug' => $validated['slug'] ?? Link::generateUniqueSlug(),
         ]);
 
         return response()->json($link, 201);
     }
 
     /**
-     * Show a link by slug and log the click before redirecting.
+     * Log the click and redirect (also reachable as /{slug}).
      */
     public function show(Request $request, string $slug)
     {
-        $link = Link::where('slug', $slug)->firstOrFail();
+        $link = Link::where('slug', Str::lower($slug))->firstOrFail();
 
-        $link->clicks()->create([
-            'ip' => $request->ip(),
-            'user_agent' => $request->userAgent(),
-            'referrer' => $request->header('referer'),
-        ]);
-
-        $link->increment('clicks_count');
+        $link->recordClick($request);
 
         return redirect()->away($link->destination_url);
-    }
-
-    /**
-     * Generate a unique random slug for a new link.
-     */
-    private function generateUniqueSlug(): string
-    {
-        do {
-            $slug = Str::lower(Str::random(6));
-        } while (Link::where('slug', $slug)->exists());
-
-        return $slug;
     }
 }
