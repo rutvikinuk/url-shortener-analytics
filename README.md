@@ -88,9 +88,14 @@ Always send `Accept: application/json` so validation errors come back as JSON.
 | GET    | `/{slug}`            | Short URL: 302 to the destination, click logged |
 | GET    | `/api/links/{slug}/analytics` | Per-link totals, time series, top referrers |
 | GET    | `/api/analytics`     | Same for all links, plus `top_links`          |
+| GET    | `/api/links/{slug}/qr` | QR code (SVG) for the short URL             |
 
 Slugs: 3-32 characters of letters, numbers, `-` and `_`; stored lowercase;
 reserved words (`api`, `up`, `admin`, ...) are rejected.
+
+Optional `expires_at` (a future date/time) on `POST /api/links`: after that moment
+the short URL and QR endpoint return `410 Gone` and visits are not counted.
+The QR code is generated in-app (`app/Services/QrCode.php`), no external service.
 
 Analytics query params: `days` (1-365, default 30) and `interval` (`day` or
 `week`). The series is zero-filled so charts have no gaps.

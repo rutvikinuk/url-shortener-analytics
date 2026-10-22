@@ -28,15 +28,28 @@ class Link extends Model
         'slug',
         'destination_url',
         'clicks_count',
+        'expires_at',
     ];
 
     protected $casts = [
         'clicks_count' => 'integer',
+        'expires_at' => 'datetime',
     ];
 
     public function clicks(): HasMany
     {
         return $this->hasMany(LinkClick::class);
+    }
+
+    /** A link with no expires_at never expires. */
+    public function isExpired(): bool
+    {
+        return $this->expires_at !== null && $this->expires_at->isPast();
+    }
+
+    public function shortUrl(): string
+    {
+        return url('/'.$this->slug);
     }
 
     public static function isReserved(string $slug): bool

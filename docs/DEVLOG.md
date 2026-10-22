@@ -21,3 +21,13 @@
 **Self-check:** A link got clicks on Monday and Thursday only. Why would a chart built straight from `GROUP BY date` mislead, and what does `timeSeries()` do to fix it? Bonus: why is `COUNT(DISTINCT ip)` only an approximation of real visitors?
 
 **Next (Day 4):** Core feature 3 — custom slugs/expiry/QR. Slugs already work, so add link expiry (`expires_at`, 410 Gone after expiry) and a QR code endpoint for each link.
+
+## 2026-10-22 — Day 4: Link expiry and QR codes
+
+**Built:** Links can now expire. `POST /api/links` accepts an optional `expires_at` (must be a valid future date); a new migration adds the nullable `expires_at` column. After that moment `GET /{slug}` (and `/api/links/{slug}`) return `410 Gone` and the visit is *not* logged as a click. New endpoint `GET /api/links/{slug}/qr` returns an SVG QR code that points at the short URL. Custom slugs were already done on Day 2, so they are untouched. Because Packagist was not reachable from the build machine, I wrote a small QR encoder myself (`app/Services/QrCode.php`, byte mode, error correction M, up to 213 characters) and checked its output with OpenCV's QR decoder on several strings. 27 tests pass (9 new), and I smoke-tested with curl. Tip: once network access to Packagist works, `bacon/bacon-qr-code` is the usual library choice.
+
+**Concept — 410 vs 404, and how a QR code is made:** `404 Not Found` says "no idea what this is"; `410 Gone` says "this existed on purpose and was removed", which tells browsers and search engines to stop asking. Expiry is also checked at read time (`expires_at` is in the past?), not by a background job deleting rows, so it is exact to the second and the click history stays intact for analytics. A QR code is just your text turned into bytes, plus Reed-Solomon error-correction bytes (extra maths bytes so a scratched code still scans), laid out as black/white squares around three corner "finder" squares. Then 8 possible "masks" (checkerboard-like flips) are tried and the one with the fewest ugly patterns wins, so scanners don't get confused by big blank areas.
+
+**Self-check:** Why do we compute "is it expired?" when the link is visited instead of deleting expired rows with a scheduled job? And what is the one thing that must NOT happen when an expired link is visited (hint: analytics)?
+
+**Next (Day 5):** Core feature 4 — the React dashboard: call the API from the frontend, create links, and draw the click-analytics charts.
