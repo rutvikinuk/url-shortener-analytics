@@ -56,6 +56,8 @@ DB_CONNECTION=sqlite
 
 ### Frontend
 
+The dashboard (create links, QR code, click charts) lives in `frontend/`; screenshot: `docs/dashboard.png`. Run the backend on port 8000 first.
+
 ```bash
 cd frontend
 npm install
@@ -111,5 +113,5 @@ slug rejection (422), non-http URL rejection, 404 for unknown slugs, 302
 redirect with click logging, and the frontend build/lint all work. Still open:
 
 - No rate limiting on `POST /api/links`.
-- The frontend is still the Vite starter page and does not call the API yet.
+- Frontend has no automated tests yet (planned for Day 6); the dashboard was checked by hand in a browser.
 - Test coverage so far: slug validation, redirect and click logging, analytics queries (`php artisan test`).

@@ -31,3 +31,13 @@
 **Self-check:** Why do we compute "is it expired?" when the link is visited instead of deleting expired rows with a scheduled job? And what is the one thing that must NOT happen when an expired link is visited (hint: analytics)?
 
 **Next (Day 5):** Core feature 4 — the React dashboard: call the API from the frontend, create links, and draw the click-analytics charts.
+
+## 2026-10-23 — Day 5: React dashboard with click charts
+
+**Built:** The Vite starter page is replaced by a real dashboard. You can create a short link (with optional custom slug and expiry) and see server validation errors inline. Click a link to see its QR code and its own analytics; click it again to go back to "all links". A range picker (7/30/90 days) and a day/week toggle drive the data. It shows total clicks, unique visitors, an SVG line chart of clicks over time with hover tooltips, and bar lists for top referrers and top links. The charts are hand-written SVG, with no chart library. Files: `frontend/src/api.js`, `chartMath.js`, `components/*`. I tested it against the running Laravel API in a headless browser (create link, QR, filters, no console errors). The backend's 27 tests still pass. Screenshot: `docs/dashboard.png`.
+
+**Concept — mapping data to pixels, and "stale" responses:** A chart is just a function from numbers to coordinates. In SVG the y axis points down, so a bigger value means a smaller y: `y = height - (value / max) * height`. We round the max up to a tidy number (`niceMax`) so the axis ends on 5, 30 or 200 and not on 23. Because the API already zero-fills missing days, the line has no misleading gaps. On the React side, each time you change a filter we fetch again inside `useEffect`. If you click quickly, a slow old response could arrive after a newer one and overwrite it. The `stale` flag in the effect's cleanup function stops that: the old effect marks itself stale, and its result is ignored.
+
+**Self-check:** Why does `toPoints` compute `height - (clicks / max) * height` instead of just `(clicks / max) * height`? And what bug would appear without the `stale` flag if you switch from "7 days" to "90 days" on a slow network?
+
+**Next (Day 6):** Tests for the code added this block — more backend feature tests (expiry, QR, analytics edge cases) and frontend tests for `chartMath` and the components.
