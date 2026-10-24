@@ -42,7 +42,8 @@ php artisan key:generate
 touch database/database.sqlite
 php artisan migrate
 php artisan serve        # http://localhost:8000
-php artisan test         # run the backend tests
+php artisan test         # run the backend tests (70)
+cd frontend && npm test  # run the frontend tests (26, vitest + Testing Library)
 ```
 
 Requires PHP 8.3 with the `sqlite3`, `pdo_sqlite`, `mbstring`, `dom` and `xml`
@@ -113,5 +114,6 @@ slug rejection (422), non-http URL rejection, 404 for unknown slugs, 302
 redirect with click logging, and the frontend build/lint all work. Still open:
 
 - No rate limiting on `POST /api/links`.
-- Frontend has no automated tests yet (planned for Day 6); the dashboard was checked by hand in a browser.
-- Test coverage so far: slug validation, redirect and click logging, analytics queries (`php artisan test`).
+- Frontend tests cover the chart maths, the API wrapper and the components; the full `App` page (filters + data loading) is not unit-tested yet.
+- Backend coverage: slug validation, redirect and click logging, expiry, analytics queries and the QR encoder (`php artisan test`).
+- `vendor/bin/pint --test` reports a style issue in `routes/web.php` (import ordering); not fixed yet.
