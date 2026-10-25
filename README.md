@@ -113,7 +113,16 @@ Verified by running the app locally: link creation, custom slugs, duplicate
 slug rejection (422), non-http URL rejection, 404 for unknown slugs, 302
 redirect with click logging, and the frontend build/lint all work. Still open:
 
-- No rate limiting on `POST /api/links`.
+- No authentication: anyone can create links and read the link list and analytics. Fine for a local demo; add auth before exposing it publicly.
+- Rate limits use the cache store; in production use Redis (not `array`/`file`) and set `TRUSTED_PROXIES` behind a load balancer.
 - Frontend tests cover the chart maths, the API wrapper and the components; the full `App` page (filters + data loading) is not unit-tested yet.
 - Backend coverage: slug validation, redirect and click logging, expiry, analytics queries and the QR encoder (`php artisan test`).
 - `vendor/bin/pint --test` reports a style issue in `routes/web.php` (import ordering); not fixed yet.
+
+## Security (Day 7 pass)
+
+- Destination URLs must be http(s), max 2048 chars, with no spaces/control characters, no `user:pass@`, not this app's own host, and not `localhost` or a private/reserved IP (`app/Rules/SafeDestination.php`).
+- Rate limits per IP: 10 link creations/min, 120 API reads/min, 300 redirects/min (HTTP 429 + `Retry-After`).
+- Every response carries `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`; the SVG QR response also gets a locked-down CSP.
+- Keep `APP_DEBUG=false` in production. `.env` is git-ignored and no secrets are committed.
+- `npm audit` is clean. `composer audit` could not reach Packagist from the build machine; run it locally.

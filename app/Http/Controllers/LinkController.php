@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Link;
+use App\Rules\SafeDestination;
 use App\Rules\ValidSlug;
 use App\Services\QrCode;
 use Illuminate\Http\Request;
@@ -29,7 +30,7 @@ class LinkController extends Controller
         }
 
         $validated = $request->validate([
-            'destination_url' => ['required', 'url:http,https', 'max:2048'],
+            'destination_url' => ['required', 'url:http,https', 'max:2048', new SafeDestination],
             'slug' => ['nullable', new ValidSlug, 'unique:links,slug'],
             'expires_at' => ['nullable', 'date', 'after:now'],
         ]);
