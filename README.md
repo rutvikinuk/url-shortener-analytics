@@ -81,6 +81,17 @@ curl localhost:8000/api/links/demo/analytics?days=7
 
 Always send `Accept: application/json` so validation errors come back as JSON.
 
+## Docker and CI (Day 8)
+
+```bash
+docker compose up --build        # dashboard: http://localhost:8000/dashboard/
+# or: docker build -t url-shortener . && docker run -p 8000:8000 -v url-data:/data url-shortener
+```
+
+The multi-stage `Dockerfile` builds the React dashboard, installs PHP dependencies without dev packages, and runs as the unprivileged `www-data` user in production mode (`APP_DEBUG=false`). SQLite lives in the `/data` volume. Set `APP_KEY` (`docker run --rm <image> php artisan key:generate --show`) or a temporary key is generated on each start. The container uses PHP's built-in server, which is fine for a demo; put nginx + php-fpm or FrankenPHP in front for real traffic.
+
+GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main` and every pull request: backend tests + `composer audit`, frontend lint/tests/build + `npm audit`, then builds the Docker image and smoke-tests it (`/up`, dashboard, create a link, redirect). `pint --test` runs as an advisory step.
+
 ## API
 
 | Method | Endpoint            | Description                                  |
