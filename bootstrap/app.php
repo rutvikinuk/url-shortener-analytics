@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\RequireApiToken;
 use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(SecurityHeaders::class);
+        $middleware->alias(['api.token' => RequireApiToken::class]);
 
         // Behind a load balancer set TRUSTED_PROXIES in .env so $request->ip()
         // (used for rate limits and click logs) is the visitor, not the proxy.

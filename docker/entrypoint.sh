@@ -9,6 +9,10 @@ if [ -z "$APP_KEY" ]; then
     echo "WARNING: APP_KEY not set, using a temporary key. Set APP_KEY to keep it stable." >&2
 fi
 
+if [ -z "$API_TOKEN" ]; then
+    echo "WARNING: API_TOKEN not set, the management API is open to anyone who can reach it." >&2
+fi
+
 touch "$DB_DATABASE"
 php artisan migrate --force
 

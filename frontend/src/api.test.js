@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createLink, getLinkAnalytics, getOverview, listLinks, qrUrl } from './api.js'
+import { createLink, getLinkAnalytics, getOverview, listLinks, qrUrl, setToken } from './api.js'
 
 function respond(status, body) {
   return Promise.resolve({
@@ -55,5 +55,27 @@ describe('api', () => {
 
   it('encodes the slug in the QR url', () => {
     expect(qrUrl('a b')).toBe('/api/links/a%20b/qr')
+  })
+})
+
+describe('api token', () => {
+  afterEach(() => { sessionStorage.clear() })
+
+  it('sends no Authorization header without a token', async () => {
+    fetch.mockReturnValue(respond(200, {}))
+    await listLinks()
+    expect(fetch.mock.calls[0][1].headers.Authorization).toBeUndefined()
+  })
+
+  it('sends the saved token as a Bearer header', async () => {
+    setToken('s3cret')
+    fetch.mockReturnValue(respond(200, {}))
+    await listLinks()
+    expect(fetch.mock.calls[0][1].headers.Authorization).toBe('Bearer s3cret')
+  })
+
+  it('surfaces the server message on 401', async () => {
+    fetch.mockReturnValue(respond(401, { message: 'Invalid or missing API token.' }))
+    await expect(listLinks()).rejects.toThrow('Invalid or missing API token.')
   })
 })

@@ -7,6 +7,8 @@ services:
     environment:
       # Generate one with: docker run --rm <image> php artisan key:generate --show
       APP_KEY: ${APP_KEY:-}
+      # Require "Authorization: Bearer <token>" on the management API (recommended).
+      API_TOKEN: ${API_TOKEN:-}
       APP_URL: ${APP_URL:-http://localhost:8000}
       # Behind a load balancer set this to its IP(s) so rate limits see the real visitor IP.
       TRUSTED_PROXIES: ${TRUSTED_PROXIES:-}

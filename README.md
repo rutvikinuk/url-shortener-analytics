@@ -1,34 +1,54 @@
 # URL Shortener + Analytics Dashboard
 
-A link-shortening service with custom slugs and QR code generation, backed by a
-dashboard that shows click analytics — geography, device, referrer, and
-time-series breakdowns for every link.
+A link-shortening service with custom slugs, link expiry and QR codes, plus a React
+dashboard that charts clicks over time and shows top referrers and top links.
 
-**Status:** 🚧 In active development
+**Status:** complete for its first release (90-day plan block 1, Oct 2026). CI runs tests, audits and a Docker smoke test on every push.
+
+![Dashboard](docs/dashboard.png)
+
+## Features
+
+- Short links with a custom slug or a random one; reserved words and bad characters rejected
+- `GET /{slug}` redirects (302) and logs a click; optional expiry returns `410 Gone`
+- SVG QR code per link, generated in-app with no external service
+- Analytics API and dashboard: total clicks, unique visitors, clicks over time (day/week, 7/30/90 days), top referrers, top links
+- Safety: destination URL rules, per-IP rate limits, security headers, optional bearer-token auth for the management API
+- Docker image, docker-compose and GitHub Actions CI
+
+Not built: geography and device/browser breakdowns (see [docs/ROADMAP.md](docs/ROADMAP.md)), user accounts, and a hosted deployment.
 
 ## Tech Stack
 
-- **Backend:** Laravel 12 (PHP 8.3), SQLite for local development
-- **Frontend:** React (Vite)
-- **API:** REST, JSON
+- **Backend:** Laravel 13 (PHP 8.3), SQLite
+- **Frontend:** React 19 (Vite), hand-written SVG charts
+- **Tests:** PHPUnit (backend), Vitest + Testing Library (frontend)
 
-## Planned Features
+## Architecture
 
-- Custom short slugs, with random slug generation as a fallback
-- QR code generation per link
-- Click analytics dashboard: geography, device, and referrer breakdowns
-- Time-series charts for click activity over time
+```mermaid
+flowchart LR
+    V[Visitor] -->|GET /slug| R[Redirect route<br/>rate limit]
+    R -->|log click| DB[(SQLite<br/>links, link_clicks)]
+    R -->|302| D[Destination site]
+    A[Dashboard<br/>React] -->|/api + optional Bearer token| API[Laravel API<br/>validation, rate limits]
+    API --> DB
+    API -->|SVG| QR[QR encoder]
+```
+
+A visit hits `/{slug}`, the app looks up the link, records a row in `link_clicks` (IP, user agent, referrer) and redirects. The dashboard only talks to the JSON API, which runs SQL aggregates over `link_clicks`.
 
 ## Project Structure
 
 ```
 .
-├── app/                # Laravel application code (models, controllers)
+├── app/                # Models, controllers, middleware, SafeDestination/ValidSlug rules, QrCode service
 ├── database/           # Migrations and the local SQLite database
-├── routes/              # web.php and api.php route definitions
-├── frontend/            # React (Vite) frontend
-└── docs/
-    └── ROADMAP.md        # Sprint plan and build timeline
+├── routes/             # web.php (redirect) and api.php (management API)
+├── frontend/           # React (Vite) dashboard and its tests
+├── docker/             # Container entrypoint
+├── .github/workflows/  # CI
+└── docs/               # ROADMAP, DEVLOG, DEMO script, TRACKER
 ```
 
 ## Setup
@@ -42,8 +62,8 @@ php artisan key:generate
 touch database/database.sqlite
 php artisan migrate
 php artisan serve        # http://localhost:8000
-php artisan test         # run the backend tests (70)
-cd frontend && npm test  # run the frontend tests (26, vitest + Testing Library)
+php artisan test         # run the backend tests 
+cd frontend && npm test  # run the frontend tests (vitest + Testing Library)
 ```
 
 Requires PHP 8.3 with the `sqlite3`, `pdo_sqlite`, `mbstring`, `dom` and `xml`
@@ -98,7 +118,7 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push to `main` and eve
 |--------|----------------------|-----------------------------------------------|
 | GET    | `/api/links`         | List all links                                |
 | POST   | `/api/links`         | Create a new short link                       |
-| GET    | `/api/links/{slug}`  | Redirect to the destination and log the click |
+| GET    | `/api/links/{slug}`  | Link details as JSON (does not log a click)   |
 | GET    | `/{slug}`            | Short URL: 302 to the destination, click logged |
 | GET    | `/api/links/{slug}/analytics` | Per-link totals, time series, top referrers |
 | GET    | `/api/analytics`     | Same for all links, plus `top_links`          |
@@ -114,21 +134,25 @@ The QR code is generated in-app (`app/Services/QrCode.php`), no external service
 Analytics query params: `days` (1-365, default 30) and `interval` (`day` or
 `week`). The series is zero-filled so charts have no gaps.
 
+### Authentication
+
+Set `API_TOKEN` in `.env` (or the container environment) and every management endpoint (create/list links, link details, analytics) requires `Authorization: Bearer <token>`; otherwise they return `401`. Redirects `/{slug}` and the QR image stay public. With no `API_TOKEN` the API is open, which is fine for a local demo only. The dashboard has an "API token" box that keeps the token in `sessionStorage` for the tab.
+
+## Demo
+
+A five-minute walkthrough is in [docs/DEMO.md](docs/DEMO.md).
+
 ## Roadmap
 
 See [docs/ROADMAP.md](docs/ROADMAP.md) for the sprint-by-sprint build plan.
 
-## Known issues (Day 1 audit, 19 Oct 2026; updated Day 3)
+## Known limitations
 
-Verified by running the app locally: link creation, custom slugs, duplicate
-slug rejection (422), non-http URL rejection, 404 for unknown slugs, 302
-redirect with click logging, and the frontend build/lint all work. Still open:
-
-- No authentication: anyone can create links and read the link list and analytics. Fine for a local demo; add auth before exposing it publicly.
+- Auth is a single shared token, not user accounts; links are not owned by anyone.
 - Rate limits use the cache store; in production use Redis (not `array`/`file`) and set `TRUSTED_PROXIES` behind a load balancer.
-- Frontend tests cover the chart maths, the API wrapper and the components; the full `App` page (filters + data loading) is not unit-tested yet.
-- Backend coverage: slug validation, redirect and click logging, expiry, analytics queries and the QR encoder (`php artisan test`).
-- `vendor/bin/pint --test` reports a style issue in `routes/web.php` (import ordering); not fixed yet.
+- The container uses PHP's built-in server and SQLite: fine for a demo or small deploy, not for heavy traffic.
+- The full `App` page (filters + data loading) has no unit test; its parts do.
+- No geography or device breakdown.
 
 ## Security (Day 7 pass)
 
@@ -136,4 +160,5 @@ redirect with click logging, and the frontend build/lint all work. Still open:
 - Rate limits per IP: 10 link creations/min, 120 API reads/min, 300 redirects/min (HTTP 429 + `Retry-After`).
 - Every response carries `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy` and `Permissions-Policy`; the SVG QR response also gets a locked-down CSP.
 - Keep `APP_DEBUG=false` in production. `.env` is git-ignored and no secrets are committed.
-- `npm audit` is clean. `composer audit` could not reach Packagist from the build machine; run it locally.
+- `npm audit` and `composer audit` run in CI on every push.
+- Optional `API_TOKEN` bearer auth on the management API (compared in constant time).

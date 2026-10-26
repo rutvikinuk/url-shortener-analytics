@@ -71,3 +71,15 @@
 **Self-check:** Why do we copy `composer.json` and `composer.lock` first and run `composer install` before copying the rest of the code? And why is a clean CI machine a better test than your laptop?
 
 **Next (Day 9):** Polish the README (architecture diagram, screenshots), write the demo script and a short retrospective for the block; fix anything the first CI run reveals.
+
+## 2026-10-26 — Day 9: Finishing the project (CI fixes, auth, polish, retrospective)
+
+**Built:** The first CI run (Day 8) showed all 99 backend tests and the whole frontend job passing, but `composer audit` failed on 3 advisories (league/commonmark x2, symfony/http-foundation). Packagist is unreachable from my sandbox, so I ran `composer update` for just those packages in a temporary GitHub Actions workflow (which also re-ran audit and the tests), it committed the new `composer.lock`, and I deleted that workflow afterwards. Then I closed the biggest known gap: optional bearer-token auth. Setting `API_TOKEN` makes create/list/details/analytics return 401 without `Authorization: Bearer <token>` (middleware `RequireApiToken`, constant-time compare); redirects and the QR image stay public. The dashboard got an "API token" box (kept in `sessionStorage`). New tests: `tests/Feature/ApiTokenTest.php` (4) and 3 frontend tests (29 vitest total). README rewritten (features, architecture diagram, auth, honest limitations, screenshot), `docs/ROADMAP.md` ticked to match reality, `docs/DEMO.md` added, and the Docker entrypoint warns when no `API_TOKEN` is set.
+
+**Concept — supply-chain advisories and lock files:** `composer.json` says which versions you will accept; `composer.lock` pins the exact versions you actually run. A security advisory says "versions up to X are vulnerable", so the fix is to update the lock file, not your code. `composer update vendor/pkg` moves only that package (plus what it needs), keeping the rest stable. Auditing in CI means a newly published advisory turns the build red even when you did not change anything, which is the point. Bearer-token auth: the client proves it knows a shared secret by sending it in a header on every request; the server compares it with `hash_equals`, which takes the same time whether the first or last character is wrong, so an attacker cannot learn the secret byte by byte from response times.
+
+**Self-check:** Why did the build go red when you had not changed any code? And why can the QR image endpoint stay public while `/api/links` needs the token (hint: what can an `<img>` tag not send, and what does the QR encode)?
+
+**Retrospective (block 1, 9 days):** Worked well: small daily slices, tests added a day after each feature, CI catching a real problem I could not see from my sandbox. Harder: no PHP packages or Docker in the sandbox meant relying on CI as the first real run. Not done and honest about it: geography/device breakdowns, user accounts, hosted deployment. Next time: add CI on Day 1 so surprises show up early.
+
+**Next (Day 10):** new project, `realtime-team-task-board`, day 1: audit it (run locally, list what works/breaks, fix setup + README).

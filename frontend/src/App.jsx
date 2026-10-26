@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { getLinkAnalytics, getOverview, listLinks, qrUrl } from './api.js'
+import { getLinkAnalytics, getOverview, getToken, listLinks, qrUrl, setToken } from './api.js'
 import BarList from './components/BarList.jsx'
 import LineChart from './components/LineChart.jsx'
 import LinkForm from './components/LinkForm.jsx'
@@ -13,12 +13,14 @@ export default function App() {
   const [interval, setInterval] = useState('day')
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
+  const [tokenInput, setTokenInput] = useState(getToken())
+  const [authVersion, setAuthVersion] = useState(0) // bump to reload data after the token changes
 
   const refreshLinks = useCallback(
     () => listLinks().then((page) => setLinks(page.data)).catch((e) => setError(e.message)),
     [],
   )
-  useEffect(() => { refreshLinks() }, [refreshLinks])
+  useEffect(() => { refreshLinks() }, [refreshLinks, authVersion])
 
   // Reload analytics whenever the selected link or the filters change.
   useEffect(() => {
@@ -29,7 +31,7 @@ export default function App() {
       .then((d) => { if (!stale) { setData(d); setError(null) } })
       .catch((e) => { if (!stale) setError(e.message) })
     return () => { stale = true }
-  }, [slug, days, interval])
+  }, [slug, days, interval, authVersion])
 
   return (
     <main>
@@ -41,6 +43,17 @@ export default function App() {
       </header>
 
       {error && <p className="error" role="alert">{error}</p>}
+
+      <form
+        className="toolbar"
+        onSubmit={(e) => { e.preventDefault(); setToken(tokenInput.trim()); setAuthVersion((v) => v + 1) }}
+      >
+        <label>
+          API token (only if the server sets API_TOKEN){' '}
+          <input type="password" value={tokenInput} onChange={(e) => setTokenInput(e.target.value)} autoComplete="off" />
+        </label>
+        <button type="submit">Save token</button>
+      </form>
 
       <LinkForm onCreated={(l) => { refreshLinks(); setSlug(l.slug) }} />
 
